@@ -31,6 +31,18 @@ type AnimeNode struct {
 	AlternativeTitles AlternativeTitles `json:"alternative_titles,omitempty"`
 }
 
+type AnimeDetails struct {
+	Title       string  `json:"title"`
+	StartDate   string  `json:"start_date,omitempty"`
+	EndDate     string  `json:"end_date,omitempty"`
+	Mean        float64 `json:"mean,omitempty"`
+	Rank        int     `json:"rank,omitempty"`
+	Popularity  int     `json:"popularity,omitempty"`
+	Status      string  `json:"status,omitempty"`
+	NumEpisodes int     `json:"num_episodes,omitempty"`
+	Synopsis    string  `json:"synopsis,omitempty"`
+}
+
 // Picture contains image URLs
 type Picture struct {
 	Medium string `json:"medium"`
@@ -49,11 +61,11 @@ type Paging struct {
 	Next string `json:"next,omitempty"`
 }
 
-func (a *AnimeService) Search(query string) (*AnimeSearchResponse, error) {
+func (a *AnimeService) Search(query string, limit int) (*AnimeSearchResponse, error) {
 	// URL encode the query parameter
 	params := url.Values{}
 	params.Add("q", query)
-	params.Add("limit", "10") // Optional: limit results
+	params.Add("limit", fmt.Sprintf("%d", limit)) // Optional: limit results
 
 	reqURL := a.client.baseURL.String() + "anime?" + params.Encode()
 
@@ -81,4 +93,32 @@ func (a *AnimeService) Search(query string) (*AnimeSearchResponse, error) {
 	}
 
 	return &searchResponse, nil
+}
+
+func (a *AnimeService) Details(animeID int) (*AnimeDetails, error) {
+	field := "id,title,synopsis,num_episodes,status,start_date,end_date,mean,rank,popularity"
+	reqURL := a.client.baseURL.String() + "anime/" + fmt.Sprintf("%d", animeID) + "?fields=" + field
+
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var details AnimeDetails
+	if err := json.NewDecoder(resp.Body).Decode(&details); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &details, nil
 }
