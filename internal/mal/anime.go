@@ -61,6 +61,20 @@ type Paging struct {
 	Next string `json:"next,omitempty"`
 }
 
+type Ranking struct {
+	Rank int `json:"rank"`
+}
+
+type AnimeRankingData struct {
+	Node    AnimeNode `json:"node"`
+	Ranking Ranking   `json:"ranking"`
+}
+
+type AnimeRankingResponse struct {
+	Data   []AnimeRankingData `json:"data"`
+	Paging Paging             `json:"paging"`
+}
+
 func (a *AnimeService) Search(query string, limit int) (*AnimeSearchResponse, error) {
 	// URL encode the query parameter
 	params := url.Values{}
@@ -121,4 +135,45 @@ func (a *AnimeService) Details(animeID int) (*AnimeDetails, error) {
 	}
 
 	return &details, nil
+}
+
+func (a *AnimeService) Rankings(rankingType string, limit, offset int) (*AnimeRankingResponse, error) {
+	reqURL := a.client.baseURL.String() + "anime/ranking?ranking_type=" + rankingType + fmt.Sprintf("&limit=%d&offset=%d", limit, offset)
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var rankings AnimeRankingResponse
+	if err := json.NewDecoder(resp.Body).Decode(&rankings); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+	return &rankings, nil
+}
+
+func ValidateAnimeRankingType(rankingType string) error {
+	validTypes := map[string]bool{
+		"all":          true,
+		"tv":           true,
+		"movie":        true,
+		"ova":          true,
+		"ona":          true,
+		"special":      true,
+		"bypopularity": true,
+		"favorite":     true,
+	}
+	if !validTypes[rankingType] {
+		return fmt.Errorf("invalid ranking type: %s", rankingType)
+	}
+	return nil
 }
