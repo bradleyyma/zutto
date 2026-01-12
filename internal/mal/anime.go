@@ -51,9 +51,9 @@ type Picture struct {
 
 // AlternativeTitles contains alternative titles
 type AlternativeTitles struct {
-	Synonyms []string `json:"synonyms"`
-	En       string   `json:"en"`
-	Ja       string   `json:"ja"`
+	Synonyms *[]string `json:"synonyms,omitempty"`
+	En       string    `json:"en,omitempty"`
+	Ja       string    `json:"ja,omitempty"`
 }
 
 // Paging contains pagination information
