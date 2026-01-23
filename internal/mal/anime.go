@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 type AnimeService struct {
@@ -135,6 +136,32 @@ func (a *AnimeService) Details(animeID int) (*AnimeDetails, error) {
 	}
 
 	return &details, nil
+}
+
+func (a *AnimeService) BatchDetails(animeIDs []int) ([]AnimeDetails, error) {
+	detailsList := make([]AnimeDetails, len(animeIDs))
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(animeIDs))
+	for i, id := range animeIDs {
+		wg.Add(1)
+		go func(i, id int) {
+			defer wg.Done()
+			details, err := a.Details(id)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to fetch details for anime ID %d: %w", id, err)
+				return
+			}
+			detailsList[i] = *details
+		}(i, id)
+	}
+	wg.Wait()
+	close(errChan)
+
+	if len(errChan) > 0 {
+		return nil, <-errChan
+	}
+
+	return detailsList, nil
 }
 
 func (a *AnimeService) Rankings(rankingType string, limit, offset int) (*AnimeRankingResponse, error) {

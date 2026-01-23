@@ -1,5 +1,7 @@
 package mcp
 
+import "github.com/bradleyyma/zutto/internal/mal"
+
 // RankingInput defines the input parameters for the get_anime_ranking tool
 type RankingInput struct {
 	RankingType string `json:"ranking_type" jsonschema:"Type of ranking (all, tv, movie, ova, ona, special, bypopularity, favorite)"`
@@ -9,6 +11,14 @@ type RankingInput struct {
 
 type DetailsInput struct {
 	ID int `json:"id" jsonschema:"ID of the anime to get details for"`
+}
+
+type BatchDetailsInput struct {
+	IDs []int `json:"ids" jsonschema:"IDs of the animes to get details for"`
+}
+
+type BatchDetailsOutput struct {
+	Details []mal.AnimeDetails
 }
 
 type SearchInput struct {

@@ -76,6 +76,15 @@ func (s *Server) registerTools() error {
 		s.handleAnimeSearch,
 	)
 
+	mcp.AddTool(
+		s.mcpServer,
+		&mcp.Tool{
+			Name:        "batch_get_anime_details",
+			Description: "Get detailed information about multiple animes, providing at least one MyAnimelistID",
+		},
+		s.handleBatchAnimeDetails,
+	)
+
 	return nil
 }
 
@@ -128,6 +137,30 @@ func (s *Server) handleAnimeDetails(
 	}
 
 	return nil, *details, nil
+}
+
+func (s *Server) handleBatchAnimeDetails(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input BatchDetailsInput,
+) (*mcp.CallToolResult, BatchDetailsOutput, error) {
+	if len(input.IDs) == 0 {
+		return nil, BatchDetailsOutput{}, fmt.Errorf("no anime IDs provided")
+	}
+	for _, id := range input.IDs {
+		if id <= 0 {
+			return nil, BatchDetailsOutput{}, fmt.Errorf("invalid anime ID %d", id)
+		}
+	}
+
+	details, err := s.malClient.Anime.BatchDetails(input.IDs)
+	if err != nil {
+		return nil, BatchDetailsOutput{}, fmt.Errorf("failed to batch fetch anime details: %w", err)
+	}
+	batchDetails := BatchDetailsOutput{
+		Details: details,
+	}
+	return nil, batchDetails, nil
 }
 
 func (s *Server) handleAnimeSearch(
